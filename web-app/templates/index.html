@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Дашборд аналитики продаж</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">Дашборд продаж в реальном времени</h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- График продаж -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Продажи по часам</h2>
+                <canvas id="salesChart" height="300"></canvas>
+            </div>
+
+            <!-- Движения на складе -->
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Топ движений на складе</h2>
+                <canvas id="stockChart" height="300"></canvas>
+            </div>
+        </div>
+
+        <div class="mt-8 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Последние продажи</h2>
+            <table class="min-w-full divide-y divide-gray-200" id="salesTable">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID товара</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Количество</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Цена</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Время</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <!-- Данные подгружаются через JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Загрузка данных и инициализация графиков
+        async function loadData() {
+            try {
+                const [salesRes, stockRes] = await Promise.all([
+                    fetch('/api/sales'),
+                    fetch('/api/stock')
+                ]);
+
+                const salesData = await salesRes.json();
+                const stockData = await stockRes.json();
+
+                // График продаж
+                if (window.salesChartInstance) {
+                    window.salesChartInstance.destroy();
+                }
+                window.salesChartInstance = new Chart(document.getElementById('salesChart'), {
+                    type: 'line',
+                    data: {
+                        labels: salesData.labels,
+                        datasets: [
+                            {
+                                label: 'Товаров продано',
+                                data: salesData.quantity,
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                yAxisID: 'y',
+                                tension: 0.1
+                            },
+                            {
+                                label: 'Выручка (руб)',
+                                data: salesData.revenue,
+                                borderColor: 'rgb(16, 185, 129)',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                yAxisID: 'y1',
+                                tension: 0.1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Динамика продаж и выручки'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: { display: true, text: 'Количество товаров' }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: { display: true, text: 'Выручка (руб)' }
+                            }
+                        }
+                    }
+                });
+
+                // График склада
+                if (window.stockChartInstance) {
+                    window.stockChartInstance.destroy();
+                }
+                window.stockChartInstance = new Chart(document.getElementById('stockChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: stockData.products,
+                        datasets: [
+                            {
+                                label: 'Поступления',
+                                data: stockData.incoming,
+                                backgroundColor: 'rgba(16, 185, 129, 0.8)'
+                            },
+                            {
+                                label: 'Отгрузки',
+                                data: stockData.outgoing,
+                                backgroundColor: 'rgba(239, 68, 68, 0.8)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Движение товаров на складе'
+                            }
+                        }
+                    }
+                });
+
+                // Загрузка последних продаж
+                const recentSalesRes = await fetch('/api/recent_sales');
+                const recentSales = await recentSalesRes.json();
+
+                const tbody = document.querySelector('#salesTable tbody');
+                tbody.innerHTML = recentSales.map(sale => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${sale.product_id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${sale.quantity} шт.</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${sale.price} руб.</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${new Date(sale.event_time).toLocaleString('ru-RU')}</td>
+                    </tr>
+                `).join('');
+
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                // Показываем сообщение об отсутствии данных
+                document.querySelector('h1').innerHTML =
+                    'Дашборд продаж - ожидание данных... <span class="text-sm text-gray-500">(Таблицы еще не созданы)</span>';
+            }
+        }
+
+        // Обновление данных каждые 5 секунд
+        loadData();
+        setInterval(loadData, 5000);
+
+        // Добавляем индикатор обновления
+        setInterval(() => {
+            const now = new Date().toLocaleTimeString('ru-RU');
+            document.querySelector('h1').innerHTML = `Дашборд продаж в реальном времени <span class="text-sm text-gray-500">(Обновлено: ${now})</span>`;
+        }, 1000);
+    </script>
+</body>
+</html>

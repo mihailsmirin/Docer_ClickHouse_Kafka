@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    ports: [ "2181:2181" ]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    depends_on: [ zookeeper ]
+    ports: [ "9092:9092" ]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3
+    container_name: clickhouse
+    ports: [ "8123:8123", "9000:9000" ]
+    environment:
+      CLICKHOUSE_DB: default
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    restart: unless-stopped
+
+  data-generator:
+    build: ./data-generator
+    container_name: data-generator
+    environment:
+      KAFKA_BROKER: "kafka:29092"
+      CLICKHOUSE_HOST: "clickhouse"
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - clickhouse
+
+  web-app:
+    build: ./web-app
+    container_name: web-app
+    ports: [ "3000:3000" ]
+    restart: unless-stopped
+    depends_on:
+      - clickhouse
+
+volumes:
+  clickhouse_data:
+
