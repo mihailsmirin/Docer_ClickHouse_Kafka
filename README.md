@@ -5,7 +5,7 @@
 [![ClickHouse](https://img.shields.io/badge/ClickHouse-✓-blue)](https://clickhouse.com)
 [![Real-time](https://img.shields.io/badge/Real--time-✓-green)](https://clickhouse.com)
 
-Данный проект демонстрирует современный подход к построению потоковых ETL-конвейеров с использованием **Apache Kafka** в
+Данная дипломная работа демонстрирует современный подход к построению потоковых ETL-конвейеров с использованием **Apache Kafka** в
 качестве брокера сообщений и **ClickHouse** как высокопроизводительной колоночной СУБД для аналитики.
 
 ## 🏗️ Архитектура решения
@@ -53,7 +53,7 @@ Python App → Kafka (warehouse topic) → warehouse_kafka (Kafka Engine) → st
 
 ```bash
 # Клонирование и запуск
-git clone https://github.com/andreynetrebin/kafka_clickhouse_pipeline/
+git clone https://github.com/mihailsmirin/Docer_ClickHouse_Kafka
 cd kafka_clickhouse_pipeline
 docker-compose up -d
 ```
