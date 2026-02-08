@@ -54,7 +54,7 @@ Python App → Kafka (warehouse topic) → warehouse_kafka (Kafka Engine) → st
 ```bash
 # Клонирование и запуск
 git clone https://github.com/mihailsmirin/Docer_ClickHouse_Kafka
-cd kafka_clickhouse_pipeline
+cd Docer_ClickHouse_Kafka
 docker-compose up -d
 ```
 
